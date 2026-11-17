@@ -163,7 +163,8 @@
 
   /* ---------- text editor popup */
   #editor { position: absolute; z-index: 5; display: none; min-width: 0; }
-  #editor input[type=text] { border: 2px solid var(--accent); border-radius: 3px; padding: 0 3px; background: #fff; outline: none; box-shadow: 0 0 0 4px rgba(213,90,0,.15); }
+  #edInput { display: inline-block; white-space: pre; line-height: 1.25; border: 2px solid var(--accent); border-radius: 3px; padding: 0 3px; background: #fff; outline: none; box-shadow: 0 0 0 4px rgba(213,90,0,.15); cursor: text; }
+  #edInput::selection, #edInput *::selection { background: rgba(37,99,235,.28); }
   #editbar { position: absolute; left: 0; top: -52px; display: flex; gap: 6px; align-items: center; background: #fff; color: var(--ink); border: 1px solid var(--line); border-radius: 10px; padding: 6px 8px; white-space: nowrap; font-size: 13px; box-shadow: 0 10px 30px rgba(16,40,42,.18); }
   #editbar button { height: 30px; padding: 0 10px; font-size: 13px; }
   #editbar label { display: flex; align-items: center; gap: 4px; color: var(--muted); }
@@ -367,7 +368,7 @@
     <button id="edCancel">Cancel</button>
     <button id="edOk">Apply</button>
   </div>
-  <input type="text" id="edInput" aria-label="Text">
+  <div id="edInput" contenteditable="true" role="textbox" aria-label="Text" spellcheck="false"></div>
 </div>
 </div>
 <div id="busy" role="status"></div>

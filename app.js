@@ -144,6 +144,41 @@ $('btnZoomIn').onclick = () => { S.zoom = Math.min(3, +(S.zoom + 0.25).toFixed(2
 $('btnZoomOut').onclick = () => { S.zoom = Math.max(0.5, +(S.zoom - 0.25).toFixed(2)); closeEditor(); layoutAll(); };
 let rT; window.addEventListener('resize', () => { clearTimeout(rT); rT = setTimeout(() => { if (S.pages.length) layoutAll(); }, 250); });
 
+// ------------------------------------------------------------------ styled pieces of text ("runs")
+// A run is { t: text, family, bold, italic, color: '#rrggbb', k: size as a multiple of the line's own size }.
+const STYLE_KEYS = ['family', 'bold', 'italic', 'color', 'k'];
+const styleOf = (r) => ({ family: r.family || 'sans', bold: !!r.bold, italic: !!r.italic, color: (r.color || '#000000').toLowerCase(), k: r.k || 1 });
+const sameStyle = (a, b) => STYLE_KEYS.every((k) => a[k] === b[k]);
+function mergeRuns(runs) {
+  const out = [];
+  for (const r of runs) {
+    if (!r.t) continue;
+    const st = styleOf(r), last = out[out.length - 1];
+    if (last && sameStyle(last, st)) last.t += r.t; else out.push({ ...st, t: r.t });
+  }
+  return out;
+}
+const runsKey = (runs) => JSON.stringify(mergeRuns(runs).map((r) => [r.t, ...STYLE_KEYS.map((k) => r[k])]));
+/** The runs of an edit; older edits have one style for the whole line. */
+function runsOf(m) {
+  if (m.runs && m.runs.length) return m.runs.map((r) => ({ ...r }));
+  return m.text ? [{ t: m.text, family: famOf(m), bold: !!m.bold, italic: !!m.italic, color: toHex(m.type === 'replace' ? m.fg : m.color), k: 1 }] : [];
+}
+/** The line as it is on the page: mixed bold / italic / fonts inside one line are kept. */
+function lineRuns(L, look) {
+  if (!L.segs) return L.text ? [{ ...styleOf(look), t: L.text }] : [];
+  return mergeRuns(L.segs.map((g) => ({ t: g.s, family: g.family, bold: g.bold, italic: g.italic, color: look.color, k: g.k })));
+}
+function cleanSegs(L) {
+  const segs = L.segs.map((g) => ({ ...g, k: Math.abs(g.h / L.h - 1) < 0.08 ? 1 : Math.round(g.h / L.h * 100) / 100 }));
+  if (!segs.length) return null;
+  segs[0].s = segs[0].s.replace(/^\s+/, ''); segs[segs.length - 1].s = segs[segs.length - 1].s.replace(/\s+$/, '');
+  const keep = segs.filter((g) => g.s);
+  if (keep.map((g) => g.s).join('') !== L.text.trim()) return null;
+  const mixed = keep.some((g) => g.family !== keep[0].family || g.bold !== keep[0].bold || g.italic !== keep[0].italic || g.k !== keep[0].k);
+  return mixed ? keep : null;
+}
+
 // ------------------------------------------------------------------ finding the page's own text
 async function findLines(P) {
   try {
@@ -173,17 +208,20 @@ async function findLines(P) {
         const L = lines[lines.length - 1];
         if (L && Math.abs(L.y - it.y) < 0.3 * Math.min(L.h, it.h) && it.x - L.x1 < 0.9 * L.h && it.x >= L.x0) {
           const gap = it.x - L.x1;
-          L.text += (gap > 0.15 * L.h && !L.text.endsWith(' ') && !it.s.startsWith(' ') ? ' ' : '') + it.s;
+          const piece = (gap > 0.15 * L.h && !L.text.endsWith(' ') && !it.s.startsWith(' ') ? ' ' : '') + it.s;
+          L.text += piece; L.segs.push({ s: piece, family: it.family, bold: it.bold, italic: it.italic, h: it.h });
           L.x1 = Math.max(L.x1, it.x + it.w);
-        } else lines.push({ x0: it.x, x1: it.x + it.w, y: it.y, h: it.h, text: it.s, serif: it.serif, bold: it.bold, italic: it.italic, family: it.family, fontName: it.fontName });
+        } else lines.push({ x0: it.x, x1: it.x + it.w, y: it.y, h: it.h, text: it.s, serif: it.serif, bold: it.bold, italic: it.italic, family: it.family, fontName: it.fontName,
+          segs: [{ s: it.s, family: it.family, bold: it.bold, italic: it.italic, h: it.h }] });
       }
       P.lines = lines.filter((L) => L.text.trim()).map((L) => ({
         l: L.x0 / W, r: L.x1 / W, t: (L.y - 0.80 * L.h) / H, b: (L.y + 0.22 * L.h) / H,
         text: L.text.trim(), size: L.h / H, base: L.y / H, serif: L.serif, bold: L.bold, italic: L.italic, family: L.family, fontName: L.fontName, src: 'pdf',
+        segs: cleanSegs(L),
       }));
       // Some PDFs store characters (often brackets or symbols) as private codes that cannot be read back.
       // For those lines only, read the words from the page picture instead.
-      for (const L of P.lines) if (/[\uE000-\uF8FF\uFFFD]/.test(L.text)) L.text = await readLineFromPicture(P, L) || L.text.replace(/[\uE000-\uF8FF\uFFFD]/g, '');
+      for (const L of P.lines) if (/[\uE000-\uF8FF\uFFFD]/.test(L.text)) { L.text = await readLineFromPicture(P, L) || L.text.replace(/[\uE000-\uF8FF\uFFFD]/g, ''); L.segs = null; }
     } else {
       P.lines = [];
       await ocrPage(P);
@@ -337,11 +375,14 @@ function drawMark(ctx, m, W, H) {
     const bh = (m.b - m.t) * H, pad = PAD * bh;
     ctx.fillStyle = css(m.bg);
     ctx.fillRect(m.l * W - pad, m.t * H - pad, (m.r - m.l) * W + 2 * pad, bh + 2 * pad);
-    let px = m.size * H; ctx.font = fontCss(m, px);
-    let tw = ctx.measureText(m.text).width; const room = (m.r - m.l) * W * STRETCH;
-    if (!m.fixedSize && tw > room && tw > 0) { px *= room / tw; ctx.font = fontCss(m, px); tw = room; }
-    ctx.fillStyle = css(m.fg); ctx.textBaseline = 'alphabetic';
-    ctx.fillText(m.text, m.alignRight ? m.r * W - tw : m.l * W, m.base * H);
+    const runs = runsOf(m);
+    let px = m.size * H;
+    const width = () => runs.reduce((a, r) => { ctx.font = fontCss(r, px * r.k); return a + ctx.measureText(r.t).width; }, 0);
+    let tw = width(); const room = (m.r - m.l) * W * STRETCH;
+    if (!m.fixedSize && tw > room && tw > 0) { px *= room / tw; tw = room; }
+    ctx.textBaseline = 'alphabetic';
+    let x = m.alignRight ? m.r * W - tw : m.l * W;
+    for (const r of runs) { ctx.font = fontCss(r, px * r.k); ctx.fillStyle = r.color; ctx.fillText(r.t, x, m.base * H); x += ctx.measureText(r.t).width; }
   } else if (m.type === 'box') {
     const x = Math.min(m.l, m.r) * W, y = Math.min(m.t, m.b) * H, w = Math.abs(m.r - m.l) * W, h = Math.abs(m.b - m.t) * H;
     ctx.fillStyle = m.highlight ? 'rgba(255,225,0,0.38)' : '#fff';
@@ -356,14 +397,25 @@ function drawMark(ctx, m, W, H) {
       ctx.stroke();
     }
   } else if (m.type === 'text') {
-    const px = m.size * W; ctx.font = fontCss(m, px); ctx.fillStyle = css(m.color);
-    m.text.split('\n').forEach((line, i) => ctx.fillText(line, m.x * W, m.y * H + (0.8 + i * 1.2) * px));
+    const px = m.size * W;
+    if (m.runs) {
+      const top = Math.max(...m.runs.map((r) => r.k)); let x = m.x * W;
+      for (const r of m.runs) { ctx.font = fontCss(r, px * r.k); ctx.fillStyle = r.color; ctx.fillText(r.t, x, m.y * H + 0.8 * px * top); x += ctx.measureText(r.t).width; }
+    } else {
+      ctx.font = fontCss(m, px); ctx.fillStyle = css(m.color);
+      m.text.split('\n').forEach((line, i) => ctx.fillText(line, m.x * W, m.y * H + (0.8 + i * 1.2) * px));
+    }
     if (m === S.dragging) { const bb = textBounds(m, W, H); ctx.setLineDash([5, 4]); ctx.strokeStyle = '#2563EB'; ctx.strokeRect(bb[0], bb[1], bb[2] - bb[0], bb[3] - bb[1]); }
   }
   ctx.restore();
 }
 function textBounds(m, W, H) {
   const ctx = document.createElement('canvas').getContext('2d'); const px = m.size * W;
+  if (m.runs) {
+    const top = Math.max(...m.runs.map((r) => r.k));
+    const tw = m.runs.reduce((a, r) => { ctx.font = fontCss(r, px * r.k); return a + ctx.measureText(r.t).width; }, 0);
+    return [m.x * W - 6, m.y * H - 6, m.x * W + tw + 6, m.y * H + 1.2 * px * top + 6];
+  }
   ctx.font = fontCss(m, px);
   const lines = m.text.split('\n'); const tw = Math.max(...lines.map((l) => ctx.measureText(l).width));
   return [m.x * W - 6, m.y * H - 6, m.x * W + tw + 6, m.y * H + lines.length * 1.2 * px + 6];
@@ -431,103 +483,221 @@ const textAt = (P, x, y) => { const W = P.overlay.width, H = P.overlay.height; r
 function addMark(P, m) { P.marks.push(m); S.history.push([P, m]); S.dirty = true; draw(P); }
 
 // ------------------------------------------------------------------ the inline editor (like typing in Word)
+// The box holds styled pieces. Select some words and change the font, size, colour, bold or italic: only those words change.
+// With nothing selected, the change applies to the whole line. Unless changed, everything keeps the original look.
 const ed = $('editor'), edInput = $('edInput');
 function openEditor(P, o) {
   closeEditor();
-  S.editing = { P, ...o };
+  S.editing = { P, ...o, sel: null };
+  const E = S.editing;
   P.el.appendChild(ed);
   const W = P.w, H = P.h, Wpt = P.base.width, Hpt = P.base.height;
-  let text = '', l, t, w, h, look;
+  let runs, l, t, w, look;
   if (o.mode === 'replace') {
     const src = o.mark || o.line;
-    text = o.mark ? o.mark.text : o.line.text;
-    if (o.mark) look = { family: famOf(o.mark), bold: !!o.mark.bold, italic: !!o.mark.italic, color: toHex(o.mark.fg), size: o.mark.size * Hpt };
-    else {
-      const L = o.line, col = sampleColors(P, L); S.editing.col = col;
+    if (o.mark) {
+      E.basePt = o.mark.size * Hpt; runs = runsOf(o.mark);
+      look = runs[0] ? styleOf(runs[0]) : styleOf({ family: famOf(o.mark), bold: o.mark.bold, italic: o.mark.italic, color: toHex(o.mark.fg) });
+      E.orig = o.mark.orig || runs;
+    } else {
+      const L = o.line, col = sampleColors(P, L); E.col = col;
       if (L.src === 'scan') refineScanLine(P, L, col);
-      // the original look of this line: kept unless the person changes it
-      look = { family: L.family || (L.serif ? 'serif' : 'sans'), bold: L.bold !== undefined ? !!L.bold : col.ink > 0.31,
-        italic: !!L.italic, color: toHex(col.fg), size: L.size * Hpt };
+      look = styleOf({ family: L.family || (L.serif ? 'serif' : 'sans'), bold: L.bold !== undefined ? !!L.bold : col.ink > 0.31, italic: !!L.italic, color: toHex(col.fg) });
+      E.basePt = L.size * Hpt; runs = lineRuns(L, look); E.orig = runs;
     }
-    l = src.l * W; t = src.t * H; w = Math.max((src.r - src.l) * W * 1.25 + 30, 140); h = (src.b - src.t) * H;
+    l = src.l * W; t = src.t * H; w = Math.max((src.r - src.l) * W * 1.25 + 30, 140);
     $('edOrig').hidden = !o.mark; $('edDel').hidden = true;
-    $('edOrigFont').textContent = o.line && o.line.fontName ? `Original font: ${o.line.fontName}` : (o.line && o.line.src === 'scan' ? 'Original look read from the scan' : 'Original look');
+    E.label = o.line && o.line.fontName ? `Original font: ${o.line.fontName}` : (o.line && o.line.src === 'scan' ? 'Original look read from the scan' : 'Original look');
   } else {
     const m = o.mark;
-    text = m ? m.text : '';
-    look = m ? { family: famOf(m), bold: !!m.bold, italic: !!m.italic, color: toHex(m.color), size: m.size * Wpt }
-             : { family: 'sans', bold: false, italic: false, color: toHex(S.color), size: TEXT_SIZES[S.size] * Wpt };
-    l = (m ? m.x : o.x) * W; t = (m ? m.y : o.y) * H; w = 280; h = look.size * (W / Wpt) * 1.25;
+    E.basePt = (m ? m.size : TEXT_SIZES[S.size]) * Wpt;
+    runs = m ? runsOf(m) : [];
+    look = runs[0] ? styleOf(runs[0]) : styleOf({ family: m ? famOf(m) : 'sans', bold: m && m.bold, italic: m && m.italic, color: toHex(m ? m.color : S.color) });
+    E.orig = m ? (m.orig || runs) : [];
+    l = (m ? m.x : o.x) * W; t = (m ? m.y : o.y) * H; w = 220;
     $('edOrig').hidden = true; $('edDel').hidden = !m;
-    $('edOrigFont').textContent = 'New text';
+    E.label = 'New text';
   }
-  look.size = Math.round(look.size * 2) / 2;
-  S.editing.look0 = { ...look };
-  $('edFont').value = look.family; $('edBold').checked = look.bold; $('edItalic').checked = look.italic;
-  $('edColor').value = look.color; $('edSize').value = look.size;
-  S.editing.scale = W / Wpt;               // screen pixels per point
+  E.runs0 = mergeRuns(runs); E.look = look; E.defStyle = { ...look };
+  E.scale = W / Wpt;                       // screen pixels per point
   ed.style.display = 'block';
   ed.style.left = Math.max(0, l - 4) + 'px'; ed.style.top = Math.max(0, t - 4) + 'px';
-  edInput.style.width = Math.min(w, W - l + 4) + 'px'; edInput.style.height = Math.max(h + 8, 18) + 'px';
-  edInput.value = text;
-  styleInput();
-  setTimeout(() => { edInput.focus(); edInput.select(); }, 0);
+  edInput.style.minWidth = Math.max(60, Math.min(w, W - l + 4)) + 'px';
+  renderRuns(runs);
+  showStyle(E.defStyle); showScope();
+  hint('Select some words to change only them (font, size, colour, B, I). With nothing selected, changes apply to the whole line. Enter applies, Esc cancels.');
+  setTimeout(() => { edInput.focus(); setSel(0, textLen()); }, 0);
 }
-/** The text box shows the chosen font, colour and size while typing. */
-function styleInput() {
+function closeEditor() {
+  const was = !!S.editing;
+  ed.style.display = 'none'; S.editing = null;
+  if (was && S.pages.length && TOOL_HINTS[S.tool]) hint(TOOL_HINTS[S.tool]);
+}
+/** Puts styled pieces into the box, each showing its own font, size and colour. */
+function renderRuns(runs) {
   const E = S.editing; if (!E) return;
-  const look = readLook();
-  const px = Math.max(9, look.size * E.scale);
-  edInput.style.font = fontCss(look, px);
-  edInput.style.color = look.color;
-  edInput.style.height = Math.max(px * 1.35, 18) + 'px';
+  const px = E.basePt * E.scale;
+  edInput.textContent = '';
+  let top = 1;
+  for (const r of mergeRuns(runs)) {
+    const sp = document.createElement('span');
+    sp.dataset.st = JSON.stringify(styleOf(r));
+    sp.textContent = r.t;
+    sp.style.font = fontCss(r, Math.max(8, px * r.k)); sp.style.color = r.color;
+    edInput.appendChild(sp); top = Math.max(top, r.k);
+  }
+  edInput.style.font = fontCss(E.defStyle, Math.max(8, px * E.defStyle.k));
+  edInput.style.color = E.defStyle.color;
+  edInput.style.minHeight = Math.max(18, px * top * 1.3) + 'px';
 }
-function readLook() {
-  const size = Math.min(200, Math.max(3, parseFloat($('edSize').value) || (S.editing && S.editing.look0.size) || 10));
-  return { family: $('edFont').value, bold: $('edBold').checked, italic: $('edItalic').checked, color: $('edColor').value, size };
+function textNodes() { const w = document.createTreeWalker(edInput, NodeFilter.SHOW_TEXT); const a = []; while (w.nextNode()) a.push(w.currentNode); return a; }
+const textLen = () => textNodes().reduce((a, n) => a + n.data.length, 0);
+function offsetOf(node, off) { const r = document.createRange(); r.setStart(edInput, 0); r.setEnd(node, off); return r.toString().length; }
+function setSel(a, b) {
+  const nodes = textNodes(); if (!nodes.length) return;
+  const at = (o) => { for (const n of nodes) { if (o <= n.data.length) return [n, o]; o -= n.data.length; } const n = nodes[nodes.length - 1]; return [n, n.data.length]; };
+  const [n1, o1] = at(a), [n2, o2] = at(b);
+  const r = document.createRange(); r.setStart(n1, o1); r.setEnd(n2, o2);
+  const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r);
 }
-const sameLook = (a, b) => a.family === b.family && a.bold === b.bold && a.italic === b.italic && a.color.toLowerCase() === b.color.toLowerCase() && Math.abs(a.size - b.size) < 0.01;
-function closeEditor() { ed.style.display = 'none'; S.editing = null; }
+/** Reads the box back as styled pieces. Text typed where no style is known takes the style at the cursor. */
+function readRuns() {
+  const E = S.editing, out = []; let last = E.defStyle;
+  for (const n of textNodes()) {
+    if (!n.data) continue;
+    const sp = n.parentElement && n.parentElement.closest('[data-st]');
+    const st = sp && edInput.contains(sp) ? JSON.parse(sp.dataset.st) : last;
+    last = st; out.push({ ...st, t: n.data.replace(/ /g, ' ').replace(/[\r\n]+/g, ' ') });
+  }
+  return mergeRuns(out);
+}
+function styleAt(runs, pos) {
+  let p = 0;
+  for (const r of runs) { if (pos < p + r.t.length) return styleOf(r); p += r.t.length; }
+  return runs.length ? styleOf(runs[runs.length - 1]) : null;
+}
+function showStyle(st) {
+  const E = S.editing;
+  $('edFont').value = st.family; $('edBold').checked = st.bold; $('edItalic').checked = st.italic;
+  $('edColor').value = st.color; $('edSize').value = Math.round(E.basePt * st.k * 2) / 2;
+}
+function showScope() { const E = S.editing; if (E) $('edOrigFont').textContent = E.sel ? 'Changing the selected words' : E.label; }
+document.addEventListener('selectionchange', () => {
+  const E = S.editing; if (!E) return;
+  const sel = getSelection(); if (!sel.rangeCount) return;
+  const r = sel.getRangeAt(0);
+  if (!edInput.contains(r.startContainer) || !edInput.contains(r.endContainer)) return;   // the person is using a control
+  const a = offsetOf(r.startContainer, r.startOffset), b = offsetOf(r.endContainer, r.endOffset);
+  E.sel = b > a ? [a, b] : null;
+  const st = styleAt(readRuns(), b > a ? a : Math.max(0, a - 1));
+  if (st) { E.defStyle = st; showStyle(st); }
+  showScope();
+});
+/** Changes one property (font, size, colour, bold, italic) of the selected words, or of the whole line. */
+function applyStyle(prop) {
+  const E = S.editing; if (!E) return;
+  let v;
+  if (prop === 'family') v = $('edFont').value;
+  else if (prop === 'bold') v = $('edBold').checked;
+  else if (prop === 'italic') v = $('edItalic').checked;
+  else if (prop === 'color') v = $('edColor').value.toLowerCase();
+  else { const pt = Math.min(200, Math.max(3, parseFloat($('edSize').value) || E.basePt)); v = Math.round(pt / E.basePt * 1000) / 1000; prop = 'k'; }
+  const runs = readRuns(), total = runs.reduce((a, r) => a + r.t.length, 0);
+  const [a, b] = E.sel || [0, total];
+  const out = []; let p = 0;
+  for (const r of runs) {
+    const s0 = p, s1 = p + r.t.length; p = s1;
+    const cut = [s0, Math.max(s0, Math.min(s1, a)), Math.max(s0, Math.min(s1, b)), s1];
+    for (let i = 0; i < 3; i++) {
+      if (cut[i + 1] <= cut[i]) continue;
+      const piece = { ...r, t: r.t.slice(cut[i] - s0, cut[i + 1] - s0) };
+      if (i === 1) piece[prop] = v;
+      out.push(piece);
+    }
+  }
+  if (!E.sel) E.defStyle = { ...E.defStyle, [prop]: v };
+  else E.defStyle = { ...styleAt(out, a) };
+  renderRuns(out);
+  edInput.focus();
+  if (E.sel) setSel(a, b); else setSel(total, total);
+}
 function applyEditor() {
   const E = S.editing; if (!E) return;
-  const P = E.P, txt = edInput.value.replace(/\s+$/, ''), look = readLook(), Wpt = P.base.width, Hpt = P.base.height;
-  const changedLook = !sameLook(look, E.look0);
+  if (document.activeElement === $('edSize')) applyStyle('size');
+  const P = E.P, Wpt = P.base.width, Hpt = P.base.height;
+  let runs = readRuns();
+  while (runs.length && !runs[runs.length - 1].t.trim()) runs.pop();
+  if (runs.length) runs[runs.length - 1].t = runs[runs.length - 1].t.replace(/\s+$/, '');
+  runs = mergeRuns(runs);
+  const txt = runs.map((r) => r.t).join(''), first = runs[0] || E.defStyle;
+  const style = { family: first.family, serif: first.family === 'serif', bold: first.bold, italic: first.italic };
+  const fixed = runs.some((r) => r.k !== 1);
   if (E.mode === 'replace') {
     if (E.mark) {
-      const m = E.mark;
-      if (Math.abs(look.size - E.look0.size) > 0.01) { m.size = look.size / Hpt; m.fixedSize = true; }
-      Object.assign(m, { text: txt, family: look.family, serif: look.family === 'serif', bold: look.bold, italic: look.italic, fg: hexToRgb(look.color) });
+      Object.assign(E.mark, style, { text: txt, runs, fg: hexToRgb(first.color), fixedSize: fixed || !!E.mark.fixedSize });
       S.dirty = true;
-    } else if (txt !== E.line.text || changedLook) {
-      const L = E.line, col = E.col, sizeChanged = Math.abs(look.size - E.look0.size) > 0.01;
-      addMark(P, { type: 'replace', line: L, l: L.l, t: L.t, r: L.r, b: L.b, text: txt, fg: hexToRgb(look.color), bg: col.bg,
-        family: look.family, serif: look.family === 'serif', bold: look.bold, italic: look.italic, alignRight: isNumber(L.text),
-        size: sizeChanged ? look.size / Hpt : L.size, fixedSize: sizeChanged, base: L.base });
+    } else if (runsKey(runs) !== runsKey(E.runs0)) {
+      const L = E.line;
+      addMark(P, { type: 'replace', line: L, l: L.l, t: L.t, r: L.r, b: L.b, text: txt, runs, orig: E.runs0, fg: hexToRgb(first.color), bg: E.col.bg,
+        ...style, alignRight: isNumber(L.text), size: L.size, fixedSize: fixed, base: L.base });
     }
   } else {
-    const fields = { color: look.color, size: look.size / Wpt, family: look.family, bold: look.bold, italic: look.italic };
-    if (E.mark) { if (txt) { Object.assign(E.mark, fields, { text: txt }); S.dirty = true; } else removeMark(P, E.mark); }
-    else if (txt) addMark(P, { type: 'text', x: E.x, y: E.y, text: txt, ...fields });
+    const fields = { text: txt, runs, color: first.color, size: E.basePt / Wpt, ...style };
+    if (E.mark) { if (txt) { Object.assign(E.mark, fields); S.dirty = true; } else removeMark(P, E.mark); }
+    else if (txt) addMark(P, { type: 'text', x: E.x, y: E.y, orig: [], ...fields });
   }
   closeEditor(); draw(P);
 }
+function cancelEditor() { const P = S.editing && S.editing.P; closeEditor(); if (P) draw(P); }
 function removeMark(P, m) { P.marks = P.marks.filter((x) => x !== m); S.history = S.history.filter((h) => h[1] !== m); S.dirty = true; draw(P); }
 edInput.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') { e.preventDefault(); applyEditor(); }
-  else if (e.key === 'Escape') { e.preventDefault(); const P = S.editing && S.editing.P; closeEditor(); if (P) draw(P); }
+  else if (e.key === 'Escape') { e.preventDefault(); cancelEditor(); }
+  else if ((e.ctrlKey || e.metaKey) && /^[biu]$/i.test(e.key)) {          // Ctrl+B / Ctrl+I like in Word
+    e.preventDefault();
+    if (e.key.toLowerCase() === 'b') { $('edBold').checked = !$('edBold').checked; applyStyle('bold'); }
+    if (e.key.toLowerCase() === 'i') { $('edItalic').checked = !$('edItalic').checked; applyStyle('italic'); }
+  }
+});
+edInput.addEventListener('paste', (e) => {
+  e.preventDefault();
+  document.execCommand('insertText', false, (e.clipboardData.getData('text/plain') || '').replace(/[\r\n\t]+/g, ' '));
+});
+edInput.addEventListener('drop', (e) => e.preventDefault());
+// the browser sometimes wraps typed letters in its own tags: turn them back into our styled pieces
+edInput.addEventListener('input', () => {
+  const stray = [...edInput.childNodes].some((n) => !(n.nodeType === 1 && n.tagName === 'SPAN' && n.dataset.st && n.children.length === 0));
+  if (!stray) return;
+  const sel = getSelection(); let caret = textLen();
+  if (sel.rangeCount && edInput.contains(sel.getRangeAt(0).endContainer)) caret = offsetOf(sel.getRangeAt(0).endContainer, sel.getRangeAt(0).endOffset);
+  renderRuns(readRuns()); setSel(caret, caret);
 });
 $('edOk').onclick = applyEditor;
-$('edCancel').onclick = () => { const P = S.editing && S.editing.P; closeEditor(); if (P) draw(P); };
+$('edCancel').onclick = cancelEditor;
 $('edOrig').onclick = () => { const E = S.editing; if (E && E.mark) { removeMark(E.P, E.mark); } closeEditor(); };
 $('edDel').onclick = () => { const E = S.editing; if (E && E.mark) { removeMark(E.P, E.mark); } closeEditor(); };
 ed.addEventListener('pointerdown', (e) => e.stopPropagation());
-for (const id of ['edFont', 'edBold', 'edItalic', 'edColor', 'edSize']) { $(id).addEventListener('input', styleInput); $(id).addEventListener('change', styleInput); }
+// keep the selected words selected while clicking B, I and the buttons
+ed.querySelectorAll('.tg, button').forEach((el) => el.addEventListener('mousedown', (e) => e.preventDefault()));
+$('edFont').addEventListener('change', () => applyStyle('family'));
+for (const [id, prop] of [['edBold', 'bold'], ['edItalic', 'italic']]) {
+  $(id).closest('label').addEventListener('click', (e) => { e.preventDefault(); $(id).checked = !$(id).checked; applyStyle(prop); });
+}
+$('edColor').addEventListener('change', () => applyStyle('color'));
+$('edSize').addEventListener('change', () => applyStyle('size'));
 for (const id of ['edFont', 'edBold', 'edItalic', 'edColor', 'edSize']) $(id).addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') { e.preventDefault(); applyEditor(); }
-  else if (e.key === 'Escape') { e.preventDefault(); const P = S.editing && S.editing.P; closeEditor(); if (P) draw(P); }
+  if (e.key === 'Enter') { e.preventDefault(); if (id === 'edSize') applyStyle('size'); applyEditor(); }
+  else if (e.key === 'Escape') { e.preventDefault(); cancelEditor(); }
 });
-$('edKeep').onclick = () => { const E = S.editing; if (!E) return; const k = E.look0;
-  $('edFont').value = k.family; $('edBold').checked = k.bold; $('edItalic').checked = k.italic; $('edColor').value = k.color; $('edSize').value = k.size; styleInput(); edInput.focus(); };
+/** Back to the original font, size and colour (the words you typed stay). */
+$('edKeep').onclick = () => {
+  const E = S.editing; if (!E) return;
+  const now = readRuns(), txt = now.map((r) => r.t).join(''), orig = mergeRuns(E.orig || []);
+  const restored = orig.map((r) => r.t).join('') === txt ? orig : (txt ? [{ ...styleOf(E.look), t: txt }] : []);
+  E.defStyle = { ...styleOf(E.look) }; E.sel = null;
+  renderRuns(restored); showStyle(E.defStyle); showScope();
+  edInput.focus(); setSel(textLen(), textLen());
+};
 
 // ------------------------------------------------------------------ toolbar
 function setTool(t) {
@@ -618,14 +788,18 @@ function writeMarks(page, marks, F) {
     if (m.type === 'replace') {
       const hN = m.b - m.t, padY = PAD * hN, padX = PAD * hN * dispH / dispW;
       rect(m.l - padX, m.t - padY, m.r + padX, m.b + padY, { color: toPdfColor(m.bg) });
-      const font = F.pick(m);
-      const safe = printable(m.text, font);
-      if (safe) {
-        let size = m.size * dispH, tw = font.widthOfTextAtSize(safe, size);
+      const runs = runsOf(m).map((r) => { const font = F.pick(r); return { ...r, font, safe: printable(r.t, font) }; }).filter((r) => r.safe);
+      if (runs.length) {
+        let size = m.size * dispH;
+        let tw = runs.reduce((a, r) => a + r.font.widthOfTextAtSize(r.safe, size * r.k), 0);
         const room = (m.r - m.l) * dispW * STRETCH;
         if (!m.fixedSize && tw > room && tw > 0) { size *= room / tw; tw = room; }
-        const p = pt(m.alignRight ? m.r - tw / dispW : m.l, m.base);
-        page.drawText(safe, { x: p[0], y: p[1], size, font, color: toPdfColor(m.fg), rotate: degrees(rot) });
+        let xN = m.alignRight ? m.r - tw / dispW : m.l;
+        for (const r of runs) {
+          const p = pt(xN, m.base);
+          page.drawText(r.safe, { x: p[0], y: p[1], size: size * r.k, font: r.font, color: toPdfColor(r.color), rotate: degrees(rot) });
+          xN += r.font.widthOfTextAtSize(r.safe, size * r.k) / dispW;
+        }
       }
     } else if (m.type === 'box') {
       rect(m.l, m.t, m.r, m.b, m.highlight ? { color: rgb(1, 0.88, 0), opacity: 0.35 } : { color: rgb(1, 1, 1) });
@@ -640,6 +814,16 @@ function writeMarks(page, marks, F) {
       }
     } else if (m.type === 'text') {
       const size = m.size * dispW;
+      if (m.runs) {
+        const top = Math.max(...m.runs.map((r) => r.k)); let xN = m.x;
+        for (const r of m.runs) {
+          const font = F.pick(r), safe = printable(r.t, font); if (!safe) continue;
+          const p = pt(xN, m.y + 0.8 * top * m.size * dispW / dispH);
+          page.drawText(safe, { x: p[0], y: p[1], size: size * r.k, font, color: toPdfColor(r.color), rotate: degrees(rot) });
+          xN += font.widthOfTextAtSize(safe, size * r.k) / dispW;
+        }
+        continue;
+      }
       m.text.split('\n').forEach((line, i) => {
         const font = F.pick(m);
         const safe = printable(line, font); if (!safe) return;
@@ -708,10 +892,10 @@ async function saveWord() {
         covers.push([L, col.bg]);
         const text = rep ? rep.text : L.text;
         if (!text) continue;
-        frames.push({ text, l: L.l, r: L.r, size: (rep ? rep.size : L.size) * Hpt, base: (rep ? rep.base : L.base) * Hpt,
-          bold: rep ? rep.bold : (L.bold !== undefined ? L.bold : col.ink > 0.31),
-          family: rep ? famOf(rep) : (L.family || (L.serif ? 'serif' : 'sans')), italic: rep ? !!rep.italic : !!L.italic,
-          color: rep ? rep.fg : col.fg, right: isNumber(L.text) });
+        const basePt = (rep ? rep.size : L.size) * Hpt;
+        const runs = rep ? runsOf(rep) : lineRuns(L, styleOf({ family: L.family || (L.serif ? 'serif' : 'sans'),
+          bold: L.bold !== undefined ? L.bold : col.ink > 0.31, italic: !!L.italic, color: toHex(col.fg) }));
+        frames.push({ runs: runs.map((r) => ({ ...r, size: basePt * r.k })), l: L.l, r: L.r, base: (rep ? rep.base : L.base) * Hpt, right: isNumber(L.text) });
       }
       for (const [L, bg] of covers) {
         const bh = (L.b - L.t) * c.height, pad = PAD * bh;
@@ -719,8 +903,11 @@ async function saveWord() {
       }
       for (const m of P.marks) {
         if (m.type === 'box' || m.type === 'ink') drawMark(ctx, m, c.width, c.height);
-        if (m.type === 'text') m.text.split('\n').forEach((t, i) => frames.push({ text: t, l: m.x, r: m.x + 0.5, size: m.size * Wpt,
-          base: m.y * Hpt + (0.8 + i * 1.2) * m.size * Wpt, bold: !!m.bold, italic: !!m.italic, family: famOf(m), color: m.color, right: false }));
+        if (m.type === 'text' && m.runs) {
+          const top = Math.max(...m.runs.map((r) => r.k));
+          frames.push({ runs: m.runs.map((r) => ({ ...r, size: m.size * Wpt * r.k })), l: m.x, r: m.x + 0.5, base: m.y * Hpt + 0.8 * top * m.size * Wpt, right: false });
+        } else if (m.type === 'text') m.text.split('\n').forEach((t, i) => frames.push({ runs: [{ t, family: famOf(m), bold: !!m.bold, italic: !!m.italic, color: toHex(m.color), size: m.size * Wpt }],
+          l: m.x, r: m.x + 0.5, base: m.y * Hpt + (0.8 + i * 1.2) * m.size * Wpt, right: false }));
       }
       const blob = await new Promise((r) => c.toBlob(r, 'image/jpeg', 0.88));
       const img = `bg${P.i + 1}.jpg`;
@@ -742,19 +929,21 @@ async function saveWord() {
       pid++;
       const fl = [];
       for (const f of frames) {
-        mctx.font = fontCss(f, f.size);
-        const tw = mctx.measureText(f.text).width;
-        const lineH = f.size * LINE_H;
+        const fsize = Math.max(...f.runs.map((r) => r.size));
+        const tw = f.runs.reduce((a, r) => { mctx.font = fontCss(r, r.size); return a + mctx.measureText(r.t).width; }, 0);
+        const lineH = fsize * LINE_H;
         const w = Math.max((f.r - f.l) * Wpt, tw) * 1.12 + 6;
         const left = f.right ? Math.max(0, f.r * Wpt - w) : f.l * Wpt;
         const top = f.base - BASE_AT * lineH;
-        const sz = Math.max(2, Math.round(f.size * 2));
         x += `<w:p><w:pPr><w:framePr w:w="${Math.round(w * TW)}" w:h="${Math.round(lineH * TW)}" w:hRule="atLeast" w:wrap="around" ` +
           `w:vAnchor="page" w:hAnchor="page" w:x="${Math.round(left * TW)}" w:y="${Math.max(0, Math.round(top * TW))}"/>` +
           `<w:spacing w:before="0" w:after="0" w:line="${Math.round(lineH * TW)}" w:lineRule="exact"/><w:jc w:val="${f.right ? 'right' : 'left'}"/></w:pPr>` +
-          `<w:r><w:rPr><w:rFonts w:ascii="${FAMILY_WORD[famOf(f)]}" w:hAnsi="${FAMILY_WORD[famOf(f)]}" w:cs="${FAMILY_WORD[famOf(f)]}"/>` +
-          `${f.bold ? '<w:b/>' : ''}${f.italic ? '<w:i/>' : ''}<w:color w:val="${hex6(f.color)}"/><w:sz w:val="${sz}"/><w:szCs w:val="${sz}"/></w:rPr>` +
-          `<w:t xml:space="preserve">${xmlEsc(f.text)}</w:t></w:r></w:p>`;
+          f.runs.map((r) => {
+            const fam = FAMILY_WORD[r.family] || 'Arial', sz = Math.max(2, Math.round(r.size * 2));
+            return `<w:r><w:rPr><w:rFonts w:ascii="${fam}" w:hAnsi="${fam}" w:cs="${fam}"/>` +
+              `${r.bold ? '<w:b/>' : ''}${r.italic ? '<w:i/>' : ''}<w:color w:val="${hex6(r.color)}"/><w:sz w:val="${sz}"/><w:szCs w:val="${sz}"/></w:rPr>` +
+              `<w:t xml:space="preserve">${xmlEsc(r.t)}</w:t></w:r>`;
+          }).join('') + '</w:p>';
         fl.push({ w, h: lineH, x: left, top });
       }
       const sect = `<w:sectPr><w:pgSz w:w="${Math.round(Wpt * TW)}" w:h="${Math.round(Hpt * TW)}"/>` +
@@ -840,13 +1029,24 @@ async function wordToPdf(buf) {
       for (const r of runs) for (const ch of r.children) {
         if (ch.localName === 't') text += ch.textContent; else if (ch.localName === 'tab') text += ' '; else if (ch.localName === 'br') text += '\n';
       }
+      const styleOfRun = (r) => {
+        const pr = r.getElementsByTagNameNS(W, 'rPr')[0], g = (n) => pr && pr.getElementsByTagNameNS(W, n)[0];
+        const on = (el) => !!el && attr(el, 'val') !== '0' && attr(el, 'val') !== 'false';
+        const f = g('rFonts') ? attr(g('rFonts'), 'ascii') || '' : '';
+        const c = g('color') && attr(g('color'), 'val');
+        let t = ''; for (const ch of r.children) { if (ch.localName === 't') t += ch.textContent; else if (ch.localName === 'tab') t += ' '; else if (ch.localName === 'br') t += '\n'; }
+        return { t, bold: on(g('b')), italic: on(g('i')), size: g('sz') ? +attr(g('sz'), 'val') / 2 : 10,
+          family: /courier|mono|consol/i.test(f) ? 'mono' : /times|georgia|garamond|cambria|serif/i.test(f) && !/sans/i.test(f) ? 'serif' : 'sans',
+          color: /^[0-9A-Fa-f]{6}$/.test(c || '') ? c : '000000' };
+      };
+      const wruns = runs.map(styleOfRun).filter((r) => r.t);
       const rPr = runs[0] && runs[0].getElementsByTagNameNS(W, 'rPr')[0];
       const get = (n) => rPr && rPr.getElementsByTagNameNS(W, n)[0];
       const sp = pPr.getElementsByTagNameNS(W, 'spacing')[0], jc = pPr.getElementsByTagNameNS(W, 'jc')[0];
       const b = get('b'), it = get('i');
       const rf = get('rFonts') ? attr(get('rFonts'), 'ascii') || '' : '';
       cur.frames.push({
-        text, x: +attr(fp, 'x') / TW, y: +attr(fp, 'y') / TW, w: +attr(fp, 'w') / TW,
+        text, wruns, x: +attr(fp, 'x') / TW, y: +attr(fp, 'y') / TW, w: +attr(fp, 'w') / TW,
         size: get('sz') ? +attr(get('sz'), 'val') / 2 : 10, bold: !!b && attr(b, 'val') !== '0' && attr(b, 'val') !== 'false',
         family: /courier|mono|consol/i.test(rf) ? 'mono' : /times|georgia|garamond|cambria|serif/i.test(rf) && !/sans/i.test(rf) ? 'serif' : 'sans',
         italic: !!it && attr(it, 'val') !== '0' && attr(it, 'val') !== 'false',
@@ -870,6 +1070,19 @@ async function wordToPdf(buf) {
       const font = F.pick(f);
       const lineH = f.lineH || f.size * LINE_H;
       const color = rgb(parseInt(f.color.slice(0, 2), 16) / 255, parseInt(f.color.slice(2, 4), 16) / 255, parseInt(f.color.slice(4, 6), 16) / 255);
+      if (f.wruns.length > 1 && !f.text.includes('\n')) {
+        const top = Math.max(...f.wruns.map((r) => r.size)), lh = f.lineH || top * LINE_H;
+        const parts = f.wruns.map((r) => { const fo = F.pick(r); return { ...r, fo, safe: printable(r.t, fo) }; }).filter((r) => r.safe);
+        const tw = parts.reduce((a, r) => a + r.fo.widthOfTextAtSize(r.safe, r.size), 0);
+        let x = f.right ? f.x + f.w - 3 - tw : f.x;
+        for (const r of parts) {
+          const c = r.color;
+          page.drawText(r.safe, { x, y: pg.h - (f.y + BASE_AT * lh), size: r.size, font: r.fo,
+            color: rgb(parseInt(c.slice(0, 2), 16) / 255, parseInt(c.slice(2, 4), 16) / 255, parseInt(c.slice(4, 6), 16) / 255) });
+          x += r.fo.widthOfTextAtSize(r.safe, r.size);
+        }
+        continue;
+      }
       f.text.split('\n').forEach((line, i) => {
         const safe = printable(line, font); if (!safe) return;
         const tw = font.widthOfTextAtSize(safe, f.size);
