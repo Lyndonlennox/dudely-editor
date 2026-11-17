@@ -1,5 +1,5 @@
 // Keeps the editor working offline once it has been opened.
-const CACHE = 'dudely-editor-pc-v3';
+const CACHE = 'dudely-editor-pc-v5';
 const FILES = ['./', 'index.html', 'app.js', 'tools.js', 'logo.png', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png',
   'pdf.min.mjs', 'pdf.worker.min.mjs', 'pdf-lib.min.js', 'jszip.min.js', 'docx-preview.min.js', 'tesseract.min.js', 'worker.min.js',
   'tesseract-core-simd-lstm.wasm.js', 'tesseract-core-lstm.wasm.js', 'eng.traineddata.gz'];

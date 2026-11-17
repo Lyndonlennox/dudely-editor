@@ -13,7 +13,16 @@ export function showView(v) {
   for (const [k, id] of Object.entries(VIEWS)) $(id).hidden = k !== v;
   document.querySelectorAll('.tab').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.view === v)));
   $('editActions').hidden = v !== 'edit';
+  document.querySelectorAll('.acts[data-for]').forEach((el) => (el.hidden = el.dataset.for !== v));
+  const [title, sub] = VIEW_TEXT[v];
+  $('viewTitle').textContent = title; $('viewSub').textContent = sub;
 }
+const VIEW_TEXT = {
+  edit: ['Edit PDF', 'Change words on the page and keep the original layout. Save as PDF or Word.'],
+  photos: ['Photos', 'Make photos clearer and brighter, crop and turn them, then download them or put them in a PDF.'],
+  merge: ['Merge', 'Join PDFs and photos into one PDF, in the order you choose.'],
+  split: ['Split', 'Cut one PDF into several files: every few pages, or by page ranges you type.'],
+};
 document.querySelectorAll('.tab').forEach((b) => (b.onclick = () => showView(b.dataset.view)));
 
 // ------------------------------------------------------------------ saving files
