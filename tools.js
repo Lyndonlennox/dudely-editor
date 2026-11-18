@@ -8,25 +8,28 @@ const isPdf = (f) => f.type === 'application/pdf' || /\.pdf$/i.test(f.name);
 const isImg = (f) => f.type.startsWith('image/');
 
 // ------------------------------------------------------------------ tabs
-const VIEWS = { edit: 'viewEdit', photos: 'viewPhotos', merge: 'viewMerge', split: 'viewSplit' };
-export function showView(v) {
+const VIEWS = { home: 'viewHome', tool: 'viewTool', edit: 'viewEdit', photos: 'viewPhotos', merge: 'viewMerge', split: 'viewSplit' };
+export function showView(v, title, sub) {
   for (const [k, id] of Object.entries(VIEWS)) $(id).hidden = k !== v;
-  document.querySelectorAll('.tab').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.view === v)));
+  document.querySelectorAll('.tab').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.view === v || (v === 'tool' && b.dataset.view === 'home'))));
   $('editActions').hidden = v !== 'edit';
   document.querySelectorAll('.acts[data-for]').forEach((el) => (el.hidden = el.dataset.for !== v));
-  const [title, sub] = VIEW_TEXT[v];
-  $('viewTitle').textContent = title; $('viewSub').textContent = sub;
+  const [t0, s0] = VIEW_TEXT[v] || ['', ''];
+  $('viewTitle').textContent = title || t0; $('viewSub').textContent = sub || s0;
+  document.body.dataset.view = v;
 }
 const VIEW_TEXT = {
+  home: ['All tools', 'Every PDF tool in one place. Your files never leave this computer.'],
+  tool: ['', ''],
   edit: ['Edit PDF', 'Change words on the page and keep the original layout. Save as PDF or Word.'],
   photos: ['Photos', 'Make photos clearer and brighter, crop and turn them, then download them or put them in a PDF.'],
   merge: ['Merge', 'Join PDFs and photos into one PDF, in the order you choose.'],
   split: ['Split', 'Cut one PDF into several files: every few pages, or by page ranges you type.'],
 };
-document.querySelectorAll('.tab').forEach((b) => (b.onclick = () => showView(b.dataset.view)));
+document.querySelectorAll('.tab').forEach((b) => (b.onclick = () => { showView(b.dataset.view); if (b.dataset.view === 'home') window.dudelyHome?.(); }));
 
 // ------------------------------------------------------------------ saving files
-async function saveFile(blob, name, desc = 'File') {
+export async function saveFile(blob, name, desc = 'File') {
   const ext = (name.match(/\.[^.]+$/) || ['.bin'])[0];
   if (window.showSaveFilePicker) {
     try {

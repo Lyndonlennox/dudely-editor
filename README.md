@@ -1,5 +1,17 @@
 # Dudely Editor PC
 
+Version 7: an "All tools" page with 45 tools, grouped like this:
+- Merge & organise: Merge, Organise (drag to reorder, turn, copy, blank page, delete), Alternate & mix.
+- Split: by pages or ranges, Extract pages, Split in half, Split by size, Split by bookmarks, Split by text.
+- Edit & sign: Edit, Fill & Sign, Delete pages, Create forms, Fill in a form.
+- Compress (light, medium, strong).
+- Security: Protect (password + print/copy/change rights), Unlock, Watermark, Flatten.
+- Convert from PDF: Word, JPG/PNG, Text, Excel, PowerPoint.
+- Convert to PDF: Word, JPG/PNG, HTML (through the print window).
+- Page & file tools: Rotate, Page numbers, Header & footer, Bates numbering, Create bookmarks, Crop (auto or by mm),
+  Edit metadata, Extract images, Flip, Grayscale, N-up, Rename, Repair, Resize, Remove annotations.
+- Scans & photos: Improve photos, OCR (searchable PDF), Deskew.
+
 Edit any PDF on a computer, including scanned and photo PDFs, without changing its layout.
 
 - Edit text: click a line already on the page and type. The old words are covered in the page's own
@@ -22,7 +34,7 @@ Edit any PDF on a computer, including scanned and photo PDFs, without changing i
    file on the PC, open the folder, press Ctrl+A to select ALL the files and click Open. Commit changes.
    (There are no folders: every file sits next to index.html.)
 3. Check: the repository's main page lists index.html, app.js, tools.js, pdf.min.mjs,
-   tesseract-core-lstm.wasm.js, eng.traineddata.gz and the other files (about 30).
+   tesseract-core-lstm.wasm.js, eng.traineddata.gz and the other files (about 37).
 4. Settings > Pages > Source: Deploy from a branch; Branch: main; folder: / (root) > Save.
 5. After 1-2 minutes: https://YOUR-GITHUB-NAME.github.io/dudely-editor/
 
@@ -33,4 +45,4 @@ Edit any PDF on a computer, including scanned and photo PDFs, without changing i
    "Open with" for PDF files.
 
 Libraries included: PDF.js (Apache-2.0), pdf-lib (MIT), Tesseract.js (Apache-2.0) with English text data,
-JSZip (MIT), docx-preview (Apache-2.0).
+JSZip (MIT), docx-preview (Apache-2.0), @cantoo/pdf-lib 2.5.3 (MIT, used only for Protect and Unlock).

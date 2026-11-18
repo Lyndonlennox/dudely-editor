@@ -47,7 +47,7 @@
   .tab { justify-content: flex-start; height: auto; padding: 9px 10px; gap: 11px; border: 0; border-radius: 8px; background: transparent; color: #D7E6E6; text-align: left; }
   .tab:hover { background: rgba(255,255,255,.07); color: #fff; }
   .tab .i { width: 20px; height: 20px; }
-  .tab span { display: flex; flex-direction: column; line-height: 1.25; }
+  .tab > span { display: flex; flex-direction: column; line-height: 1.25; }
   .tab small { color: #8FAFB1; font-size: 12px; font-weight: 400; }
   .tab[aria-selected="true"] { background: rgba(255,255,255,.1); color: #fff; box-shadow: inset 3px 0 0 var(--accent); }
   .tab[aria-selected="true"] small { color: #C3D8D9; }
@@ -194,6 +194,135 @@
     .docx-wrapper > section.docx { box-shadow: none !important; margin: 0 !important; }
   }
 
+
+  /* ---------- sidebar extras */
+  .home-tab { margin-top: 10px; }
+  .quick { display: flex; flex-direction: column; padding: 0 10px; gap: 1px; }
+  .quick button { justify-content: flex-start; height: 32px; padding: 0 10px; border: 0; background: transparent; color: #C4D8D9; font-size: 13px; font-weight: 400; gap: 10px; }
+  .quick button:hover { background: rgba(255,255,255,.07); color: #fff; }
+  .quick .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--c); box-shadow: 0 0 0 3px color-mix(in srgb, var(--c) 25%, transparent); flex: none; }
+  .i.sm { width: 15px; height: 15px; }
+  .i.big { width: 44px; height: 44px; stroke-width: 1.4; color: var(--brand-2); }
+  .small { font-size: 12.5px; }
+  .linkbtn { height: auto; padding: 0; border: 0; background: none; color: var(--accent); font-weight: 600; font-size: 13px; text-transform: none; letter-spacing: 0; margin-left: 10px; }
+  .linkbtn:hover { background: none; text-decoration: underline; }
+  .section-title { display: flex; align-items: center; }
+  body[data-view=home] .topbar, body[data-view=tool] .topbar { display: none; }
+  /* ---------- all tools page */
+  .home { max-width: 1240px; margin: 0 auto; padding: 30px 30px 60px; }
+  .home-top { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; flex-wrap: wrap; margin-bottom: 22px; }
+  .home-top .eyebrow { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
+  .home-top h2 { margin: 6px 0 6px; font-size: 26px; color: var(--brand); }
+  .home-top p { margin: 0; color: var(--muted); }
+  .search { display: flex; align-items: center; gap: 8px; width: min(420px, 100%); height: 44px; padding: 0 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); color: var(--muted); }
+  .search:focus-within { border-color: var(--brand-2); box-shadow: 0 0 0 3px rgba(10,76,81,.12); }
+  .search input { flex: 1; border: 0; outline: 0; font: inherit; font-size: 14.5px; background: transparent; color: var(--ink); min-width: 0; }
+  .search .count { font-size: 12px; white-space: nowrap; }
+  .cats { columns: 4 250px; column-gap: 18px; }
+  .cat { break-inside: avoid; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px 10px 10px; margin: 0 0 18px; box-shadow: var(--shadow); }
+  .cat h3 { display: flex; align-items: center; gap: 8px; margin: 0 6px 8px; font-size: 11.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--c); }
+  .cat h3::before { content: ""; width: 4px; height: 14px; border-radius: 2px; background: var(--c); }
+  .cat h3 .i { display: none; }
+  .tl { width: 100%; justify-content: flex-start; height: 40px; padding: 0 8px; gap: 11px; border: 0; background: transparent; font-weight: 500; font-size: 14px; border-radius: 9px; }
+  .tl:hover { background: #F2F6F6; }
+  .tl:hover .tl-nm { color: var(--brand); }
+  .tl-ic { width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; color: var(--c); background: color-mix(in srgb, var(--c) 11%, white); flex: none; }
+  .tl-ic .i { width: 17px; height: 17px; }
+  .tl-nm { flex: 1; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .new { font-size: 11px; font-weight: 600; color: #0E9F6E; background: #E3F6EE; border-radius: 5px; padding: 1px 6px; }
+  /* ---------- tool screen */
+  .toolroot { max-width: 1180px; width: 100%; margin: 0 auto; padding: 22px 28px 60px; }
+  .t-head { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
+  .t-head .back { margin-right: 6px; color: var(--muted); padding: 0 10px 0 6px; }
+  .t-head .back:hover { color: var(--brand); }
+  .t-ic { width: 46px; height: 46px; border-radius: 12px; display: grid; place-items: center; background: color-mix(in srgb, var(--c) 12%, white); color: var(--c); flex: none; }
+  .t-ic .i { width: 24px; height: 24px; }
+  .t-head h2 { margin: 0; font-size: 22px; color: var(--brand); }
+  .t-head p { margin: 2px 0 0; color: var(--muted); }
+  .t-body { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); padding: 18px; }
+  .panel h4 { margin: 0 0 12px; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); display: flex; align-items: center; gap: 7px; }
+  .panel.over, .t-files.over { outline: 3px dashed var(--accent); outline-offset: -6px; }
+  .dz { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; padding: 46px 20px; border: 2px dashed #B7CACB; border-radius: 12px; background: #F8FBFB; color: var(--muted); }
+  .dz b { color: var(--ink); font-size: 16px; }
+  .dz button { margin-top: 8px; }
+  .dz small { display: flex; align-items: center; gap: 5px; font-size: 12px; margin-top: 4px; }
+  .fl-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .fl-head h4 { margin: 0; }
+  .fl, .results ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+  .fl li, .results li { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--line-2); border-radius: 10px; background: #FBFCFC; min-width: 0; }
+  .fl-ic { width: 32px; height: 32px; border-radius: 8px; display: grid; place-items: center; background: var(--brand-3); color: var(--brand); flex: none; }
+  .fl-nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+  .fl-meta { color: var(--muted); font-size: 12.5px; white-space: nowrap; }
+  .fl-act { display: flex; gap: 4px; }
+  .fl-act button { height: 30px; padding: 0 10px; font-size: 13px; }
+  .fl-act .icon-btn { width: 30px; padding: 0; }
+  .opts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 14px; }
+  .o-fld { display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-weight: 600; color: var(--ink); min-width: 0; }
+  .o-fld.wide, .o-chk, .opt-info { grid-column: 1 / -1; }
+  .o-fld small { font-weight: 400; color: var(--muted); }
+  .o-fld input, .o-fld select, .o-fld textarea { font: inherit; font-weight: 400; height: 38px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--ink); width: 100%; }
+  .o-fld textarea { height: auto; padding: 8px 10px; resize: vertical; font-family: inherit; line-height: 1.5; }
+  .o-fld input[type=color] { padding: 3px; width: 64px; cursor: pointer; }
+  .o-fld input:focus, .o-fld select:focus, .o-fld textarea:focus { border-color: var(--brand-2); outline: 0; box-shadow: 0 0 0 3px rgba(10,76,81,.12); }
+  .rng { display: flex; align-items: center; gap: 10px; } .rng input { flex: 1; accent-color: var(--accent); height: auto; padding: 0; border: 0; } .rng output { min-width: 28px; font-weight: 400; color: var(--muted); }
+  .o-chk { display: flex; align-items: flex-start; gap: 9px; font-size: 13.5px; cursor: pointer; padding: 2px 0; }
+  .o-chk input { width: 17px; height: 17px; margin: 1px 0 0; accent-color: var(--brand); flex: none; }
+  .opt-info { display: flex; gap: 8px; margin: 0; padding: 10px 12px; border-radius: 9px; background: var(--brand-3); color: var(--brand); font-size: 13px; }
+  .run-row { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line-2); }
+  .t-opts .status { margin-top: 10px; }
+  .notes { margin: 6px 0 0; padding-left: 18px; color: var(--muted); font-size: 13px; }
+  .results { margin-top: 14px; padding: 14px; border-radius: 12px; background: #F1FAF5; border: 1px solid #CBEBD9; }
+  .results h4 { color: #0E7A50; }
+  .results li { background: #fff; }
+  /* ---------- page organiser */
+  .pg { padding: 16px; }
+  .pg-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding-bottom: 12px; border-bottom: 1px solid var(--line-2); margin-bottom: 10px; }
+  .pg-file { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: var(--brand); margin-right: auto; max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .seg { display: inline-flex; align-items: center; gap: 2px; padding: 3px; border: 1px solid var(--line); border-radius: 10px; background: #F8FAFA; }
+  .seg button { height: 32px; padding: 0 10px; border: 0; background: transparent; font-size: 13px; border-radius: 7px; }
+  .seg button:hover { background: #fff; box-shadow: var(--shadow); }
+  .seg button[aria-pressed="true"] { background: var(--brand); color: #fff; }
+  .pg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 18px 14px; padding: 12px 2px 6px; }
+  .pc { display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; user-select: none; }
+  .pc-img { position: relative; width: 100%; aspect-ratio: 3 / 4; display: grid; place-items: center; border-radius: 10px; background: #EEF3F3; border: 2px solid transparent; transition: border-color .12s, background .12s; overflow: hidden; }
+  .pc:hover .pc-img { background: #E3ECEC; }
+  .pc.sel .pc-img { border-color: var(--accent); background: var(--accent-soft); }
+  .pc-rot { width: 86%; height: 86%; display: grid; place-items: center; transition: transform .2s; }
+  .pc-rot img { max-width: 100%; max-height: 100%; box-shadow: 0 1px 4px rgba(0,0,0,.18); background: #fff; display: block; }
+  .pc-rot img:not([src]) { width: 70%; aspect-ratio: 3/4; }
+  .blankpg { width: 70%; aspect-ratio: 3 / 4; background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.18); display: grid; place-items: center; color: var(--muted); font-size: 12px; }
+  .pc-chk { position: absolute; top: 7px; left: 7px; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: #fff; border: 1.5px solid #B9C9CA; color: transparent; }
+  .pc.sel .pc-chk { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .pc-tools { position: absolute; top: 6px; right: 6px; display: flex; gap: 4px; opacity: 0; transition: opacity .12s; }
+  .pc:hover .pc-tools { opacity: 1; }
+  .pc-tools button { width: 28px; height: 28px; padding: 0; border-radius: 7px; background: #fff; box-shadow: var(--shadow); }
+  .pc-n { font-size: 12.5px; font-weight: 600; color: var(--ink); } .pc-n small { font-weight: 400; color: var(--muted); }
+  .pc.dragging { opacity: .35; }
+  .pc.before .pc-img { box-shadow: -4px 0 0 var(--accent); } .pc.after .pc-img { box-shadow: 4px 0 0 var(--accent); }
+  .pg-foot { position: sticky; bottom: 0; display: flex; align-items: center; justify-content: flex-end; gap: 16px; padding: 12px 0 0; margin-top: 8px; border-top: 1px solid var(--line-2); background: var(--panel); }
+  .pg-foot .muted { margin-right: auto; }
+  .pg-foot .o-chk { width: auto; }
+  /* ---------- form maker */
+  .fm-work { display: grid; grid-template-columns: minmax(0, 1fr) 290px; gap: 18px; }
+  .fm-stage { position: relative; display: inline-block; box-shadow: 0 8px 24px rgba(16,40,42,.14); background: #fff; margin: 6px 0; }
+  .fm-stage canvas { display: block; }
+  #fmLayer { position: absolute; left: 0; top: 0; cursor: crosshair; touch-action: none; }
+  .fbox { position: absolute; border: 1.5px solid #2563EB; background: rgba(37,99,235,.10); border-radius: 3px; cursor: move; font-size: 11px; color: #1E40AF; overflow: hidden; }
+  .fbox span { position: absolute; left: 3px; top: 1px; white-space: nowrap; pointer-events: none; }
+  .fbox.t-check span { display: none; }
+  .fbox.on { border-color: var(--accent); background: rgba(213,90,0,.12); box-shadow: 0 0 0 3px rgba(213,90,0,.2); }
+  .fbox.drawing { border-style: dashed; }
+  .fm-side { display: flex; flex-direction: column; gap: 12px; }
+  .fm-side h4 { margin: 0; }
+  .fm-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; max-height: 240px; overflow: auto; }
+  .fm-list li { display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-radius: 8px; cursor: pointer; font-size: 13px; }
+  .fm-list li span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .fm-list li small { color: var(--muted); }
+  .fm-list li:hover { background: #F2F6F6; } .fm-list li.on { background: var(--accent-soft); }
+  .fm-edit { grid-template-columns: 1fr; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: #FBFCFC; }
+  @media (max-width: 1000px) { .t-body, .fm-work { grid-template-columns: 1fr; } .cats { columns: 2 220px; } .opts { grid-template-columns: 1fr; } }
+  @media (max-width: 1180px) { .quick, .quick + .nav-label { display: none; } }
   /* ---------- smaller screens */
   @media (max-width: 1180px) {
     :root { --side: 72px; }
@@ -213,12 +342,24 @@
 <aside class="side">
   <div class="brand"><span class="logo"><img src="logo.png" alt="Dudley Investment"></span>
     <div><b>Dudely Editor</b><small>PDF, Word &amp; photo tools</small></div></div>
-  <div class="nav-label">Workspace</div>
   <nav class="tabs" role="tablist" aria-label="Sections">
-    <button class="tab" role="tab" data-view="edit" aria-selected="true" title="Edit PDF"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg><span>Edit PDF<small>Change text, sign, convert</small></span></button>
+    <button class="tab home-tab" role="tab" data-view="home" aria-selected="true" title="All tools"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg><span>All tools<small><b data-ntools style="font-weight:400">45</b> PDF tools in one place</small></span></button>
+  </nav>
+  <div class="nav-label">Workspace</div>
+  <nav class="tabs" role="tablist" aria-label="Workspace">
+    <button class="tab" role="tab" data-view="edit" aria-selected="false" title="Edit PDF"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg><span>Edit PDF<small>Change text, sign, convert</small></span></button>
     <button class="tab" role="tab" data-view="photos" aria-selected="false" title="Photos"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/></svg><span>Photos<small>Improve and download</small></span></button>
     <button class="tab" role="tab" data-view="merge" aria-selected="false" title="Merge"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="10" height="13" rx="1.5"/><rect x="11" y="8" width="10" height="13" rx="1.5"/></svg><span>Merge<small>Join files into one PDF</small></span></button>
     <button class="tab" role="tab" data-view="split" aria-selected="false" title="Split"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.1 15.9"/><path d="M14.5 14.5 20 20"/><path d="M8.1 8.1 12 12"/></svg><span>Split<small>Cut a PDF into parts</small></span></button>
+  </nav>
+  <div class="nav-label">Quick tools</div>
+  <nav class="quick" aria-label="Quick tools">
+    <button data-tool-id="compress" title="Compress"><span class="dot" style="--c:#0891B2"></span><span>Compress</span></button>
+    <button data-tool-id="organize" title="Organise pages"><span class="dot" style="--c:#0E9F6E"></span><span>Organise pages</span></button>
+    <button data-tool-id="pdf2word" title="PDF to Word"><span class="dot" style="--c:#EA580C"></span><span>PDF to Word</span></button>
+    <button data-tool-id="jpg2pdf" title="JPG to PDF"><span class="dot" style="--c:#7C3AED"></span><span>JPG to PDF</span></button>
+    <button data-tool-id="protect" title="Protect"><span class="dot" style="--c:#0D9488"></span><span>Protect with password</span></button>
+    <button data-tool-id="ocr" title="OCR"><span class="dot" style="--c:#DC2626"></span><span>OCR (make searchable)</span></button>
   </nav>
   <div class="side-foot">
     <button id="btnInstall" hidden><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8"/><path d="M12 16v4"/></svg><span>Install on this PC</span></button>
@@ -229,7 +370,7 @@
 <div class="main">
 <header class="topbar">
   <div class="crumb"><h1 id="viewTitle">Edit PDF</h1><p id="viewSub">Change words on the page and keep the original layout.</p></div>
-  <span id="editActions" class="acts">
+  <span id="editActions" class="acts" hidden>
     <span class="file none" id="fileChip"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9Z"/><path d="M14 3v6h6"/><path d="M8 13h8"/><path d="M8 17h5"/></svg><span id="fileName">No file open</span></span>
     <button id="btnOpen" title="Open PDF, photo or Word"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg><span class="lbl">Open</span></button>
     <button id="btnWord" disabled title="Save as Word"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9Z"/><path d="M14 3v6h6"/><path d="m8 13 1.5 5 1.5-4 1.5 4 1.5-5"/></svg><span class="lbl">Save as Word</span></button>
@@ -244,7 +385,18 @@
   <input type="file" id="spInput" accept="application/pdf" hidden>
 </header>
 
-<section id="viewEdit" class="view">
+<section id="viewHome" class="view">
+  <div class="home">
+    <div class="home-top">
+      <div><span class="eyebrow">Dudley Investment · Dudely Editor</span><h2>What do you want to do with your PDF?</h2>
+        <p>Pick a tool. Everything runs on this computer, works offline, and never uploads your files.</p></div>
+      <label class="search"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input id="homeSearch" type="search" placeholder="Search tools, e.g. compress, password, Excel" autocomplete="off" aria-label="Search tools"><span id="homeCount" class="count"></span></label>
+    </div>
+    <div class="cats" id="homeCats"></div>
+  </div>
+</section>
+<section id="viewTool" class="view" hidden><div id="toolRoot" class="toolroot"></div></section>
+<section id="viewEdit" class="view" hidden>
 <div id="tools" role="toolbar" aria-label="Editing tools">
   <div class="grp"><small>Tools</small><div>
     <button class="tool" data-tool="edit" aria-pressed="true" title="Edit text"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg><span class="lbl">Edit text</span></button>
@@ -286,7 +438,7 @@
         <div class="dropbox"><svg class="i big" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9Z"/><path d="M14 3v6h6"/><path d="M8 13h8"/><path d="M8 17h5"/></svg><b>Drop a file here</b>Works offline, files stay on this PC
           <div class="fmts"><span class="fmt">PDF</span><span class="fmt">DOCX</span><span class="fmt">JPG</span><span class="fmt">PNG</span></div></div>
       </div>
-      <div class="section-title">What you can do</div>
+      <div class="section-title">What you can do <button class="linkbtn" data-tool-home>See all <span data-ntools>45</span> tools →</button></div>
       <div class="features">
         <div class="feature"><div class="badge"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></div><h3>Edit text in place</h3><p>Words keep their original font, size and colour unless you change them.</p></div>
         <div class="feature"><div class="badge"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></svg></div><h3>Scanned &amp; photo PDFs</h3><p>Text is read from the picture so you can correct it like a normal document.</p></div>
@@ -384,8 +536,10 @@
 <script src="docx-preview.min.js"></script>
 <script type="module" src="app.js"></script>
 <script type="module" src="tools.js"></script>
+<script type="module" src="toolsui.js"></script>
 <script>
   // welcome cards jump to their section; show the open file's name as a chip
+  document.querySelectorAll('[data-tool-home]').forEach((b) => b.onclick = () => document.querySelector('.tab[data-view="home"]').click());
   document.querySelectorAll('[data-goto]').forEach((b) => b.onclick = () => document.querySelector(`.tab[data-view="${b.dataset.goto}"]`).click());
   new MutationObserver(() => document.getElementById('fileChip').classList.toggle('none', document.getElementById('fileName').textContent === 'No file open'))
     .observe(document.getElementById('fileName'), { childList: true, characterData: true, subtree: true });

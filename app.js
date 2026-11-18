@@ -63,6 +63,7 @@ function confirmLeave() { return !S.dirty || confirm('Your edits are not saved y
 window.addEventListener('beforeunload', (e) => { if (S.dirty) { e.preventDefault(); e.returnValue = ''; } });
 
 async function openFiles(files) {
+  if ($('viewEdit').hidden) window.dudelyShowEdit?.();
   busy('Opening…');
   try {
     const first = files[0];

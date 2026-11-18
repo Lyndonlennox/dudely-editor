@@ -1,6 +1,6 @@
 // Keeps the editor working offline once it has been opened.
-const CACHE = 'dudely-editor-pc-v6';
-const FILES = ['./', 'index.html', 'app.js', 'tools.js', 'logo.png', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png',
+const CACHE = 'dudely-editor-pc-v7';
+const FILES = ['./', 'index.html', 'app.js', 'tools.js', 'toolsui.js', 'pdftools.js', 'pdfcore.js', 'officefiles.js', 'icons.js', 'pdf-lib-secure.mjs', 'logo.png', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png',
   'pdf.min.mjs', 'pdf.worker.min.mjs', 'pdf-lib.min.js', 'jszip.min.js', 'docx-preview.min.js', 'tesseract.min.js', 'worker.min.js',
   'tesseract-core-simd-lstm.wasm.js', 'tesseract-core-lstm.wasm.js', 'eng.traineddata.gz'];
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(FILES)).then(() => self.skipWaiting())); });
